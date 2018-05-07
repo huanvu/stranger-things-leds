@@ -2,7 +2,7 @@
   "name": "stranger-things-leds",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
     "start": "node .",
     "test": "mocha **/*.test.js"
@@ -24,6 +24,8 @@
     "sinon-chai": "^3.0.0"
   },
   "dependencies": {
+    "body-parser": "^1.18.2",
+    "express": "^4.16.3",
     "rpi-ws281x-native": "^0.8.2",
     "rx": "^4.1.0"
   }
