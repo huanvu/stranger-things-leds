@@ -10,7 +10,7 @@ chai.use(sinonChai);
 describe('lights', () => {
   let lights = new Lights(10);
 
-  describe('blinkPhrase', () => {
+  describe('blinkString', () => {
     let blinkCharStub;
 
     afterEach(() => {
@@ -22,7 +22,7 @@ describe('lights', () => {
         return Observable.just();
       })
 
-      lights.blinkPhrase('test 1 2 3')
+      lights.blinkString('test 1 2 3')
         .subscribe(() => {
           expect(blinkCharStub).to.have.callCount(10);
           expect(blinkCharStub).to.have.been.calledWith('t');
@@ -44,7 +44,7 @@ describe('lights', () => {
     });
 
     it('should throw an error given a non string', done => {
-      lights.blinkPhrase([])
+      lights.blinkString([])
         .subscribe(() => {
           expect(true).to.be.not.ok
         }, err => {
@@ -62,7 +62,7 @@ describe('lights', () => {
           expect(true).to.be.not.ok
           done();
         }, () => done());
-    });
+    }).timeout(5000);
 
     it('should throw an error given a non string', done => {
       lights.blinkChar([])
