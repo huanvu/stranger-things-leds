@@ -18,9 +18,13 @@
   },
   "homepage": "https://github.com/huanvu/stranger-things-leds#readme",
   "devDependencies": {
-    "mocha": "^5.1.1"
+    "chai": "^4.1.2",
+    "mocha": "^5.1.1",
+    "sinon": "^5.0.5",
+    "sinon-chai": "^3.0.0"
   },
   "dependencies": {
-    "rpi-ws281x-native": "^0.8.2"
+    "rpi-ws281x-native": "^0.8.2",
+    "rx": "^4.1.0"
   }
 }

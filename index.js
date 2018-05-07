@@ -1,4 +1,4 @@
-var ws281x = require('rpi-ws281x-native');
+import ws281x from 'rpi-ws281x-native';
 
 var NUM_LEDS = parseInt(process.argv[2], 10) || 100,
     pixelData = new Uint32Array(NUM_LEDS);
@@ -24,7 +24,6 @@ setInterval(function () {
 }, 1000 / 30);
 
 console.log('Press <ctrl>+C to exit.');
-
 
 // rainbow-colors, taken from http://goo.gl/Cs3H0v
 function colorwheel(pos) {
