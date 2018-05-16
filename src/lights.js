@@ -1,6 +1,7 @@
 'use strict';
 const {Observable} = require('rx');
 const ws281x = require('rpi-ws281x-native');
+const winston = require('winston');
 
 let DEFAULT_ON_MS = 2000;
 let DEFAULT_OFF_MS = 500;
@@ -116,7 +117,7 @@ Lights.prototype = {
   },
 
   animateOn: function() {
-    console.log('animateOn');
+    winston.debug('animateOn');
     return this.turnOn()
       .delay(100)
       .flatMap(() => this.turnOff())
@@ -141,14 +142,14 @@ Lights.prototype = {
   },
 
   animateOff: function() {
-    console.log('animateOff');
+    winston.debug('animateOff');
     return this.animateRandomOnOff(2000)
       .flatMap(() => this.turnOff())
       .delay(500);
   },
 
   fadeOn: function(duration) {
-    console.log('fadeOn', duration);
+    winston.debug('fadeOn', duration);
     let cycleDuration = duration / this.maxBrightness;
     ws281x.setBrightness(0);
     this.turnOn();
@@ -160,7 +161,7 @@ Lights.prototype = {
   },
 
   fadeOff: function(duration) {
-    console.log('fadeOff', duration);
+    winston.debug('fadeOff', duration);
     let cycleDuration = duration / this.maxBrightness;
     ws281x.setBrightness(0);
     this.turnOn();
@@ -172,21 +173,21 @@ Lights.prototype = {
   },
 
   turnOn: function() {
-    console.log('turnOn');
+    winston.debug('turnOn');
     this.setPixelDataOn();
     ws281x.render(this.pixelData);
     return Observable.just();
   },
 
   turnOff: function() {
-    console.log('turnOff');
+    winston.debug('turnOff');
     this.setPixelDataOff();
     ws281x.render(this.pixelData);
     return Observable.just();
   },
 
   blinkChar: function(char, ms = DEFAULT_ON_MS, offDelay = DEFAULT_OFF_MS) {
-    console.log('blinkChar', char);
+    winston.debug('blinkChar', char);
     if (!(typeof char === 'string' || char instanceof String) || char.length != 1)
       return Observable.throw(new Error('Not a character'));  
 
@@ -209,13 +210,12 @@ Lights.prototype = {
   },
 
   blinkString: function(string) {
-    console.log('blinkString');
     if (!(typeof string === 'string' || string instanceof String))
       return Observable.throw(new Error('Not a string'));
   
     return this.animateOff()
       .flatMap(() => {
-        console.log('Blinking', string);
+        winston.debug('Blinking', string);
         return Observable.from([...string])
           .concatMap(char => 
             Observable.just(char)

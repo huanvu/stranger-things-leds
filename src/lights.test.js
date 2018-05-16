@@ -1,20 +1,31 @@
-const Lights = require('./lights');
+const { Lights } = require('./lights');
 const {Observable} = require('rx');
 const chai = require('chai');
 const {assert, expect} = chai;
 const sinon = require('sinon');
 const sinonChai = require("sinon-chai");
+const winston = require('winston');
 chai.should();
 chai.use(sinonChai);
 
 describe('lights', () => {
+  winston.level = 'warn';
   let lights = new Lights(10);
 
   describe('blinkString', () => {
-    let blinkCharStub;
+    let blinkCharStub, animateOnStub, animateOffStub;
+
+    beforeEach(() => {
+      animateOnStub = sinon.stub(lights, 'animateOn')
+        .callsFake(Observable.just);
+      animateOffStub = sinon.stub(lights, 'animateOff')
+        .callsFake(Observable.just);
+    });
 
     afterEach(() => {
       if (!!blinkCharStub) blinkCharStub.restore();
+      animateOnStub.restore();
+      animateOffStub.restore();
     });
 
     it('should call blinkChar correct number of times', done => {
@@ -37,7 +48,7 @@ describe('lights', () => {
           expect(blinkCharStub).to.have.been.calledWith('3');
           done();
         }, err => {
-          console.log('err',err);
+          winston.error(err);
           expect(true).to.be.not.ok
           done();
         });
@@ -59,6 +70,7 @@ describe('lights', () => {
       lights.blinkChar('a')
         .subscribe(() => {}, 
         err => {
+          winston.error(err);
           expect(true).to.be.not.ok
           done();
         }, () => done());
