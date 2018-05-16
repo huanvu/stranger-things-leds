@@ -3,7 +3,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const port = 3000
 
-const NUM_LEDS = 100;
+const NUM_LEDS = 31;
 let CHAR_MAP = {
   a: {pos: 23, color: BLUE},
   b: {pos: 24, color: YELLOW},
@@ -63,5 +63,6 @@ app.listen(port, (err) => {
     return console.log('something bad happened', err)
   }
 
-  console.log(`server is listening on ${port}`)
+  lights.turnOn()
+    .subscribe(() => console.log(`server is listening on ${port}`));
 });
