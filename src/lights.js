@@ -83,6 +83,24 @@ Lights.prototype = {
       .subscribe(() => this.processQueue());
   },
 
+  turnOn: function() {
+    while(i--) this.pixelData[i] = 0;
+    if (!!ledConfig) {
+      this.pixelData[ledConfig.pos] = 0xFFFFFF;
+    }
+    ws281x.render(this.pixelData);
+    return Observable.just();
+  },
+
+  turnOff: function() {
+    while(i--) this.pixelData[i] = 0;
+    if (!!ledConfig) {
+      this.pixelData[ledConfig.pos] = 0;
+    }
+    ws281x.render(this.pixelData);
+    return Observable.just();
+  },
+
   blinkChar: function(char, ms = DEFAULT_ON_MS, offDelay = DEFAULT_OFF_MS) {
     if (!(typeof char === 'string' || char instanceof String) || char.length != 1)
       return Observable.throw(new Error('Not a character'));  
@@ -115,4 +133,11 @@ Lights.prototype = {
   }
 };
 
-module.exports = Lights;
+module.exports = {
+  Lights,
+  RED,
+  GREEN,
+  BLUE,
+  YELLOW,
+  ORANGE 
+};
