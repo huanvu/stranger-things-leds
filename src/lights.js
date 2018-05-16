@@ -10,6 +10,8 @@ let BLUE = 0x0000FF;
 let YELLOW = 0xFFFF00;
 let ORANGE = 0x80FF00;
 
+let MAX_BRIGHTNESS = 50;
+
 let DEFAULT_CHAR_MAP = {
   a: {pos: 0, color: GREEN},
   b: {pos: 1, color: ORANGE},
@@ -43,27 +45,34 @@ function rgb2Int(r, g, b) {
   return ((r & 0xff) << 16) + ((g & 0xff) << 8) + (b & 0xff);
 }
 
-function Lights(ledCount, charMap = DEFAULT_CHAR_MAP) {
+function Lights(ledCount, charMap = DEFAULT_CHAR_MAP, maxBrightness = MAX_BRIGHTNESS) {
   this.ledCount = ledCount;
   this.pixelData = new Uint32Array(this.ledCount);
   this.charMap = charMap;
   this.queue = [];
+  this.maxBrightness = maxBrightness;
   ws281x.init(this.ledCount);
+  ws281x.setBrightness(50);
 };
 
 Lights.prototype = {
   constructor: Lights,
 
-  reset: function() {
-    ws281x.reset();
+  setPixelDataOn: function() {
+    for (var key in this.charMap) {
+      if (!this.charMap.hasOwnProperty(key)) return;
+      let prop = this.charMap[key]
+      this.pixelData[prop.pos] = prop.color;
+    } 
   },
 
-  holdOff: function(offDelay) {
+  setPixelDataOff: function() {
     let i = this.ledCount;
-    while(i--) this.pixelData[i] = 0;
-    ws281x.render(this.pixelData);
+    while (i--) this.pixelData[i] = 0;
+  },
 
-    return Observable.just().delay(offDelay);
+  reset: function() {
+    ws281x.reset();
   },
 
   queuePhrase: function(phrase) {
@@ -83,7 +92,101 @@ Lights.prototype = {
       .subscribe(() => this.processQueue());
   },
 
+  randomOff: function(offCount = 4) {
+    let i = offCount;
+    while(i--) {
+      let pos = Math.round(Math.random() * this.ledCount);
+      this.pixelData[pos] = 0x000000;
+    }
+    ws281x.render(this.pixelData);  
+    return Observable.just();
+  },
+
+  animateRandomOnOff: function(duration, offCount) {
+    let cycleDuration = 100;
+    let cycles = duration / cycleDuration;
+    return Observable.range(0, cycles)
+      .concatMap(cycleNum => Observable.just(cycleNum)
+        .flatMap(cycleNum => {
+          this.setPixelDataOn();
+          return this.randomOff(offCount);
+        })
+        .delay(cycleDuration))
+      .toArray();
+  },
+
+  animateOn: function() {
+    console.log('animateOn');
+    return this.turnOn()
+      .delay(100)
+      .flatMap(() => this.turnOff())
+      .delay(100)
+      .flatMap(() => this.turnOn())
+      .delay(100)
+      .flatMap(() => this.turnOff())
+      .delay(100)
+      .flatMap(() => this.turnOn())
+      .delay(100)
+      .flatMap(() => this.turnOff())
+      .delay(300)
+      .flatMap(() => this.turnOn())
+      .delay(100)
+      .flatMap(() => this.turnOff())
+      .delay(100)
+      .flatMap(() => this.turnOn())
+      .delay(100)
+      .flatMap(() => this.turnOff())
+      .delay(100)
+      .flatMap(() => this.fadeOn(200));
+  },
+
+  animateOff: function() {
+    console.log('animateOff');
+    return this.animateRandomOnOff(2000)
+      .flatMap(() => this.turnOff())
+      .delay(500);
+  },
+
+  fadeOn: function(duration) {
+    console.log('fadeOn', duration);
+    let cycleDuration = duration / this.maxBrightness;
+    ws281x.setBrightness(0);
+    this.turnOn();
+    return Observable.range(0, this.maxBrightness + 1)
+      .concatMap(brightness => Observable.just(brightness)
+          .map(ws281x.setBrightness)
+          .delay(cycleDuration))
+      .toArray();
+  },
+
+  fadeOff: function(duration) {
+    console.log('fadeOff', duration);
+    let cycleDuration = duration / this.maxBrightness;
+    ws281x.setBrightness(0);
+    this.turnOn();
+    return Observable.range(0, this.maxBrightness + 1)
+      .concatMap(brightness => Observable.just(this.maxBrightness - brightness)
+          .map(ws281x.setBrightness)
+          .delay(cycleDuration))
+      .toArray();
+  },
+
+  turnOn: function() {
+    console.log('turnOn');
+    this.setPixelDataOn();
+    ws281x.render(this.pixelData);
+    return Observable.just();
+  },
+
+  turnOff: function() {
+    console.log('turnOff');
+    this.setPixelDataOff();
+    ws281x.render(this.pixelData);
+    return Observable.just();
+  },
+
   blinkChar: function(char, ms = DEFAULT_ON_MS, offDelay = DEFAULT_OFF_MS) {
+    console.log('blinkChar', char);
     if (!(typeof char === 'string' || char instanceof String) || char.length != 1)
       return Observable.throw(new Error('Not a character'));  
 
@@ -94,25 +197,40 @@ Lights.prototype = {
       this.pixelData[ledConfig.pos] = ledConfig.color;
     }
     ws281x.render(this.pixelData);
+    ws281x.setBrightness(this.maxBrightness);
   
     if (!!ledConfig) 
       return Observable.just()
         .delay(ms)
-        .flatMap(() => this.holdOff(offDelay));
+        .flatMap(() => this.turnOff())
+        .delay(offDelay);
     
     return Observable.just();
   },
 
   blinkString: function(string) {
+    console.log('blinkString');
     if (!(typeof string === 'string' || string instanceof String))
       return Observable.throw(new Error('Not a string'));
   
-    return Observable.from([...string])
-      .concatMap(char => 
-        Observable.just(char)
-          .flatMap(char => this.blinkChar(char.toLowerCase())))
-      .toArray();
+    return this.animateOff()
+      .flatMap(() => {
+        console.log('Blinking', string);
+        return Observable.from([...string])
+          .concatMap(char => 
+            Observable.just(char)
+              .flatMap(char => this.blinkChar(char.toLowerCase())))
+          .toArray();
+      })
+      .flatMap(() => this.animateOn());
   }
 };
 
-module.exports = Lights;
+module.exports = {
+  Lights,
+  RED,
+  GREEN,
+  BLUE,
+  YELLOW,
+  ORANGE 
+};
