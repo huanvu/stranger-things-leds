@@ -3,8 +3,71 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css">
     <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        let messageTextArea = document.querySelector('#MessageTextArea');
+        let queueButton = document.querySelector('#QueueButton');
+        let clearButton = document.querySelector('#ClearButton');
+        let toast = document.querySelector('#Toast');
+
+        queueButton.addEventListener('click', () => {
+          let message = messageTextArea.value.trim();
+          messageTextArea.value = '';
+
+          let req = new XMLHttpRequest();
+          req.open('POST', '/api/queue');
+          req.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+          req.send(JSON.stringify({message}));
+
+          var data = {message: `Queued Message: ${message}`};
+          toast.MaterialSnackbar.showSnackbar(data);
+        });
+
+        clearButton.addEventListener('click', () => {
+          let req = new XMLHttpRequest();
+          req.open('DELETE', '/api/queue');
+          req.send();
+
+          var data = {message: 'Cleared Queue'};
+          toast.MaterialSnackbar.showSnackbar(data);
+        });
+      });
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
-    Test 1 2 3
+
+    <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+      <header class="mdl-layout__header">
+        <div class="mdl-layout__header-row">
+          <span class="mdl-layout-title">Stranger Things Lights</span>
+        </div>
+      </header>
+     
+      <main class="mdl-layout__content">
+        <div class="page-content">
+          <div class="mdl-textfield mdl-js-textfield">
+            <textarea id="MessageTextArea" class="mdl-textfield__input" type="text" rows= "3">
+            </textarea>
+            <label class="mdl-textfield__label" for="sample5">Message...</label>
+          </div>
+  
+          <div>
+            <button id="QueueButton" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--colored">
+              Queue Message
+            </button>
+            <button id="ClearButton" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent">
+              Clear Queue
+            </button>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <div id="Toast" class="mdl-js-snackbar mdl-snackbar">
+      <div class="mdl-snackbar__text"></div>
+      <button class="mdl-snackbar__action" type="button"></button>
+    </div>
+      
   </body>
 </html>

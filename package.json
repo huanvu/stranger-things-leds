@@ -26,6 +26,8 @@
   "dependencies": {
     "body-parser": "^1.18.2",
     "express": "^4.16.3",
+    "react": "^16.3.2",
+    "react-dom": "^16.3.2",
     "rpi-ws281x-native": "^0.8.2",
     "rx": "^4.1.0",
     "winston": "^2.4.2"
