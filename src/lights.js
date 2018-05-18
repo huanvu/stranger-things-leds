@@ -10,6 +10,7 @@ let GREEN = 0xFF0000;
 let BLUE = 0x0000FF;
 let YELLOW = 0xFFFF00;
 let ORANGE = 0x80FF00;
+let OFF = 0x000000;
 
 let MAX_BRIGHTNESS = 50;
 
@@ -46,7 +47,7 @@ function rgb2Int(r, g, b) {
   return ((r & 0xff) << 16) + ((g & 0xff) << 8) + (b & 0xff);
 }
 
-function Lights(ledCount, charMap = DEFAULT_CHAR_MAP, maxBrightness = MAX_BRIGHTNESS) {
+function Lights(ledCount = 26, charMap = DEFAULT_CHAR_MAP, maxBrightness = MAX_BRIGHTNESS) {
   this.ledCount = ledCount;
   this.pixelData = new Uint32Array(this.ledCount);
   this.charMap = charMap;
@@ -76,28 +77,11 @@ Lights.prototype = {
     ws281x.reset();
   },
 
-  queuePhrase: function(phrase) {
-    this.queue.push(phrase);
-    if (!this.isBlinking) this.processQueue();
-  },
-
-  processQueue: function() {
-    let phrase = this.queue.shift();
-    if (!phrase) {
-      this.isBlinking = false;
-      return;
-    }
-
-    this.isBlinking = true;
-    this.blinkString(phrase)
-      .subscribe(() => this.processQueue());
-  },
-
   randomOff: function(offCount = 4) {
     let i = offCount;
     while(i--) {
       let pos = Math.round(Math.random() * this.ledCount);
-      this.pixelData[pos] = 0x000000;
+      this.pixelData[pos] = OFF;
     }
     ws281x.render(this.pixelData);  
     return Observable.just();
@@ -209,7 +193,7 @@ Lights.prototype = {
     return Observable.just();
   },
 
-  blinkString: function(string) {
+  blinkMessage: function(string) {
     if (!(typeof string === 'string' || string instanceof String))
       return Observable.throw(new Error('Not a string'));
   

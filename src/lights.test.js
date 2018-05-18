@@ -10,7 +10,7 @@ chai.use(sinonChai);
 
 describe('lights', () => {
   winston.level = 'warn';
-  let lights = new Lights(10);
+  let lights = new Lights();
 
   describe('blinkString', () => {
     let blinkCharStub, animateOnStub, animateOffStub;
@@ -33,7 +33,7 @@ describe('lights', () => {
         return Observable.just();
       })
 
-      lights.blinkString('test 1 2 3')
+      lights.blinkMessage('test 1 2 3')
         .subscribe(() => {
           expect(blinkCharStub).to.have.callCount(10);
           expect(blinkCharStub).to.have.been.calledWith('t');
@@ -55,7 +55,7 @@ describe('lights', () => {
     });
 
     it('should throw an error given a non string', done => {
-      lights.blinkString([])
+      lights.blinkMessage([])
         .subscribe(() => {
           expect(true).to.be.not.ok
         }, err => {

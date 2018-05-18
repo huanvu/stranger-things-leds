@@ -1,4 +1,6 @@
 const { Lights, GREEN, ORANGE, RED, BLUE, YELLOW } = require('./lights');
+const { Controller } = require('./controller');
+const winston = require('winston');
 const express = require('express');
 const bodyParser = require('body-parser');
 const port = 3000
@@ -41,28 +43,35 @@ let CHAR_MAP = {
 }
 
 const lights = new Lights(NUM_LEDS, CHAR_MAP);
+const controller = new Controller(lights);
+
+winston.level = 'debug';
 
 // ---- trap the SIGINT and reset before exit
 process.on('SIGINT', function () {
-  lights.reset();
+  controller.stop();
   process.nextTick(function () { process.exit(0); });
 });
 
 const app = express();
 app.use(bodyParser.urlencoded());
 app.use(bodyParser.json());
+app.use(express.static('html'))
 
 app.post('/api/queue', (req, res) => {
   let {message} = req.body;
-  if (message) lights.queuePhrase(message);
+  if (message) controller.queueMessage(message);
+  res.sendStatus(200);
+});
+
+app.delete('/api/queue', (req, res) => {
+  controller.clearQueue();
   res.sendStatus(200);
 });
 
 app.listen(port, (err) => {
-  if (err) {
-    return console.log('something bad happened', err)
-  }
+  if (err) return winston.error('Unable to start web server', err)
 
-  lights.turnOn()
-    .subscribe(() => console.log(`server is listening on ${port}`));
+  winston.info(`Web server listening on ${port}`)
+  controller.start();
 });
