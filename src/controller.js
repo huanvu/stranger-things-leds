@@ -1,6 +1,9 @@
 'use strict';
 const {Observable} = require('rx');
 const winston = require('winston');
+const nodemailer = require('nodemailer');
+const os = require('os');
+const config = require('../config.json')
 
 function Controller(lights) {
   this.lights = lights;
@@ -8,15 +11,117 @@ function Controller(lights) {
   this.messages = [];
   this.isBusy = false;
   this.randomSequenceCanceled = false;
+  this.sentAlert = false;
+  this.currentIp = null;
 };
 
 Controller.prototype = {
   constructor: Controller,
 
+  checkForHostChange: function() {
+    winston.debug('checkForHostChange');
+    let ip = this.getIp();
+
+    // if we found more than one ip, we need help.
+    if (!(typeof ip === 'string' || ip instanceof String)) {
+      winston.error(`Need help figuring the correct network interface: `, ip);
+      return;
+    }
+
+    // if the ip hasn't changed and we already sent the alert, we don't need 
+    // to do anything
+    if (ip == this.currentIp && this.sentAlert) {
+      return;
+    } 
+
+    if (ip != this.currentIp) {
+      this.currentIp = ip;
+      this.sentAlert = false;
+    }
+
+    let recipients = config.alertRecipients || [];
+    if (!recipients.length) {
+      winston.debug(`No recipients to alert`);
+      return;
+    }
+
+    this.sendNewHostAlert(ip, recipients, {
+      host: config.emailHost,
+      port: config.emailPort,
+      secure: config.emailSecure,
+      auth: {
+          user: config.emailUser,
+          pass: config.emailPassword
+      }  
+    }).subscribe(() => {
+        winston.info(`Sent IP change alert to: ${recipients}`);
+        this.sentAlert = true;
+      },
+      err => logger.error("Unable to send IP change alert", err));
+  }, 
+
+  sendNewHostAlert: function(ip, recipients, config) {
+    // Validate config
+    if (!config.host || !config.auth || !config.auth.user || !config.auth.pass) {
+      return Observable.error(new Error('Incomplete email configuration'));
+    }
+
+    // Set default options
+    config.port = config.port || 587
+    config.secure = !!config.secure || false;
+
+    let mailOptions = {
+        from: `"Stranger Things LED" <${config.auth.user}>`, 
+        to: recipients, 
+        subject: 'Stranger Things LED Link Has Changed', 
+        text: `The new link is: http://${ip}:3000`, 
+        html: `The new link is: <a href="http://${ip}:3000">http://${ip}:3000</a>`
+    };
+
+    winston.debug(`Sending email`, mailOptions);
+    winston.debug('With config', config);
+
+    // send mail
+    let transporter = nodemailer.createTransport(config);
+    let sendMail = Observable.fromCallback(transporter.sendMail, transporter);
+
+    return sendMail(mailOptions);
+  },
+
+  getIp: function() {
+    let hosts = {};
+    let host;
+    let hostCount = 0;
+    let ifaces = os.networkInterfaces();
+    Object.keys(ifaces).forEach((ifname) => {
+      var alias = 0;
+    
+      ifaces[ifname].forEach((iface) => {
+        // skip over internal (i.e. 127.0.0.1) and non-ipv4 addresses
+        if ('IPv4' !== iface.family || iface.internal !== false) return;
+    
+        if (!hosts[ifname]) hosts[ifname] = [];
+        hosts[ifname].push(iface.address);
+        host = iface.address
+        hostCount++;
+      });
+    });
+
+    if (hostCount > 1) return hosts;
+    return host;
+  },
+
   start: function() {
     this.lights.turnOn()
-      .subscribe(() => winston.info("Controller started"),
+      .subscribe(() => {},
           err => winston.error(`Unable to start controller`, err));
+
+    this.checkForHostChange();
+    this.checkHostTimer = setInterval(() => {
+      this.checkForHostChange();
+    }, 60000);
+
+    winston.info("Controller started")
   },
 
   stop: function() {
@@ -98,42 +203,6 @@ Controller.prototype = {
       this.randomSequenceDisposable = null;
     }
   },
-
-  /*
-  playRandomMessages: function(messages) {
-    console.log('playRandomMessages')
-    this.randomMessagesCancelled = false;
-
-    // if we don't have messages to play, return
-    if (!messages.length) return;
-    // if there's already a random message playing, return
-    if (!!this.playRandomSubscription) return;
-
-    let i = 0;
-    this.playRandomSubscription = Observable.while(
-        () => {
-          console.log('randomMessagesCancelled', this.randomMessagesCancelled);
-          return !this.randomMessagesCancelled && i < 100;
-        }, 
-        Observable.just(this.pickRandomMessage(messages))
-            .flatMap(message => this.lights.blinkMessage(message)))
-      .subscribe(() => {
-            winston.error("Played random message", i);
-          },
-          err => {
-            winston.error("Unable to blink message", err);
-          },
-          () => {
-            winston.error("playRandomMessages stopped");
-          })
-  },
-
-  stopRandomMessages: function() {
-    console.log('stopRandomMessages')
-    this.randomMessagesCancelled = true;
-    //if (this.playRandomSubscription) this.playRandomSubscription.dispose();
-  },
-  */
 
   pickRandomMessage: function(messages) {
     let randomIndex = Math.round(Math.random() * messages.length);

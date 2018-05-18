@@ -1,0 +1,6 @@
+{
+  "emailHost": "smtp.gmail.com",
+  "emailUsername": "sender@gmail.com",
+  "emailPassword": "somepassword",
+  "alertRecipients": ["recipient@gmail.com"]
+}
