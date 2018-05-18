@@ -61,12 +61,16 @@ app.use(express.static('html'))
 app.post('/api/queue', (req, res) => {
   let {message} = req.body;
   if (message) controller.queueMessage(message);
-  res.sendStatus(200);
+  res.send(JSON.stringify(controller.getStatus()));
 });
 
 app.delete('/api/queue', (req, res) => {
   controller.clearQueue();
-  res.sendStatus(200);
+  res.send(JSON.stringify(controller.getStatus()));
+});
+
+app.get('/api/status', (req, res) => {
+  res.send(JSON.stringify(controller.getStatus()));
 });
 
 app.listen(port, (err) => {

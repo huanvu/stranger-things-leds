@@ -32,6 +32,7 @@ Controller.prototype = {
       this.queuedSubscription.dispose();
       this.queuedSubscription = null;
     }
+    this.currentMessage = null;
     this.isBusy = false;
 
     this.lights.turnOn()
@@ -45,21 +46,28 @@ Controller.prototype = {
     if (!this.isBusy) this.processQueue(this.queue);
   },
 
+  getStatus: function() {
+    return {
+      blinking: this.currentMessage,
+      queue: this.queue
+    };
+  },
+
   processQueue: function(queue) {
     if (this.isBusy) return;
 
-    let message = queue.shift();
-    if (!message) {
+    this.currentMessage = queue.shift();
+    if (!this.currentMessage) {
       winston.debug(`Processing queue done`)
       this.isBusy = false;
       return;
     }
 
-    winston.info(`Processing message: ${message}`)
+    winston.info(`Processing message: ${this.currentMessage}`)
     this.isBusy = true;
-    this.queuedSubscription = this.lights.blinkMessage(message)
+    this.queuedSubscription = this.lights.blinkMessage(this.currentMessage)
       .subscribe(() => {
-          winston.info(`Done processing message: ${message}`);
+          winston.info(`Done processing message: ${this.currentMessage}`);
           this.isBusy = false;
           return this.processQueue(queue);
         },
