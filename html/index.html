@@ -3,8 +3,104 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css">
     <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        let messageInput = document.querySelector('#MessageInput');
+        let queueTextArea = document.querySelector('#QueueTextArea');
+        let queueButton = document.querySelector('#QueueButton');
+        let clearButton = document.querySelector('#ClearButton');
+        let toast = document.querySelector('#Toast');
+
+        let setStatus = (status) => {
+          let text = `Blinking: ${!!status.blinking ? status.blinking : 'n/a'}\n`;
+          text += `Queued: ${!!status.queue && status.queue.length ? status.queue : 'n/a'}\n`;
+          queueTextArea.value = text;
+        };
+
+        let refreshStatus = () => {
+          let req = new XMLHttpRequest();
+          req.responseType = 'json';
+          req.open('GET', '/api/status');
+          req.onload = () => {
+            setStatus(req.response);
+            setTimeout(() => refreshStatus(), 1000);
+          };
+          req.send();
+        }
+
+        queueButton.addEventListener('click', () => {
+          let message = messageInput.value.trim();
+          messageInput.value = '';
+
+          let req = new XMLHttpRequest();
+          req.responseType = 'json';
+          req.open('POST', '/api/queue');
+          req.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+          req.onload = () => setStatus(req.response);
+          req.send(JSON.stringify({message}));
+
+          var data = {message: `Queued Message: ${message}`};
+          toast.MaterialSnackbar.showSnackbar(data);
+        });
+
+        clearButton.addEventListener('click', () => {
+          let req = new XMLHttpRequest();
+          req.responseType = 'json';
+          req.open('DELETE', '/api/queue');
+          req.onload = () => setStatus(req.response);
+          req.send();
+
+          var data = {message: 'Cleared Queue'};
+          toast.MaterialSnackbar.showSnackbar(data);
+        });
+
+        refreshStatus();
+      });
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
-    Test 1 2 3
+
+    <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+      <header class="mdl-layout__header">
+        <div class="mdl-layout__header-row">
+          <span class="mdl-layout-title">Stranger Things Lights</span>
+        </div>
+      </header>
+     
+      <main class="mdl-layout__content">
+        <div class="page-content">
+          <div>
+            <div class="mdl-textfield mdl-js-textfield">
+              <textarea id="QueueTextArea" class="mdl-textfield__input" type="text" rows= "3" readonly>
+              </textarea>
+              <label class="mdl-textfield__label" for="sample5">Queued:</label>
+            </div>
+          </div>
+
+          <div>
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+              <input id="MessageInput" class="mdl-textfield__input" type="text" id="sample3">
+              <label class="mdl-textfield__label" for="sample3">Message...</label>
+            </div>
+          </div>
+  
+          <div>
+            <button id="QueueButton" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--colored">
+              Queue Message
+            </button>
+            <button id="ClearButton" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent">
+              Clear Queue
+            </button>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <div id="Toast" class="mdl-js-snackbar mdl-snackbar">
+      <div class="mdl-snackbar__text"></div>
+      <button class="mdl-snackbar__action" type="button"></button>
+    </div>
+      
   </body>
 </html>
