@@ -3,12 +3,12 @@ const {Observable} = require('rx');
 const winston = require('winston');
 const nodemailer = require('nodemailer');
 const os = require('os');
-const config = require('../config.json')
 
-function Controller(lights) {
+function Controller(lights, messages, config) {
   this.lights = lights;
+  this.messages = messages;
+  this.config = config;
   this.queue = [];
-  this.messages = [];
   this.isBusy = false;
   this.randomSequenceCanceled = false;
   this.sentAlert = false;
@@ -20,6 +20,7 @@ Controller.prototype = {
 
   checkForHostChange: function() {
     winston.debug('checkForHostChange');
+
     let ip = this.getIp();
 
     // if we found more than one ip, we need help.
@@ -39,19 +40,19 @@ Controller.prototype = {
       this.sentAlert = false;
     }
 
-    let recipients = config.alertRecipients || [];
+    let recipients = this.config.alertRecipients || [];
     if (!recipients.length) {
       winston.debug(`No recipients to alert`);
       return;
     }
 
     this.sendNewHostAlert(ip, recipients, {
-      host: config.emailHost,
-      port: config.emailPort,
-      secure: config.emailSecure,
+      host: this.config.emailHost,
+      port: this.config.emailPort,
+      secure: this.config.emailSecure,
       auth: {
-          user: config.emailUser,
-          pass: config.emailPassword
+          user: this.config.emailUser,
+          pass: this.config.emailPassword
       }  
     }).subscribe(() => {
         winston.info(`Sent IP change alert to: ${recipients}`);
@@ -113,13 +114,17 @@ Controller.prototype = {
 
   start: function() {
     this.lights.turnOn()
-      .subscribe(() => {},
-          err => winston.error(`Unable to start controller`, err));
+      .subscribe(() => {
+          this.startRandomSequence();
+        },
+        err => winston.error(`Unable to start controller`, err));
 
-    this.checkForHostChange();
-    this.checkHostTimer = setInterval(() => {
+    if (this.config.emailHost) {
       this.checkForHostChange();
-    }, 60000);
+      this.checkHostTimer = setInterval(() => {
+        this.checkForHostChange();
+      }, 60000);
+    }
 
     winston.info("Controller started")
   },
@@ -147,6 +152,7 @@ Controller.prototype = {
 
   queueMessage: function(message) {
     winston.info(`Queuing message: ${message}`);
+    this.cancelRandomSequence();
     this.queue.push(message);
     if (!this.isBusy) this.processQueue(this.queue);
   },
@@ -165,14 +171,15 @@ Controller.prototype = {
     if (!this.currentMessage) {
       winston.debug(`Processing queue done`)
       this.isBusy = false;
+      this.startRandomSequence();
       return;
     }
 
-    winston.info(`Processing message: ${this.currentMessage}`)
+    winston.debug(`Processing message: ${this.currentMessage}`)
     this.isBusy = true;
     this.queuedSubscription = this.lights.blinkMessage(this.currentMessage)
       .subscribe(() => {
-          winston.info(`Done processing message: ${this.currentMessage}`);
+          winston.debug(`Done processing message: ${this.currentMessage}`);
           this.isBusy = false;
           return this.processQueue(queue);
         },
@@ -180,23 +187,26 @@ Controller.prototype = {
   },
 
   startRandomSequence: function() {
-    winston.debug("startRandomSequence");
+    winston.info("Starting random sequence");
+
+    if (!this.messages || !this.messages.length) return;
+    
     let i = 0;
     this.randomSequenceDisposable = Observable.while(
       () => !this.randomSequenceCanceled && i < 100,
       Observable.defer(() => {
         i++;
-        return Observable.just(i).delay(1000);
+        return this.lights.blinkMessage(this.pickRandomMessage(this.messages))
+          .delay(5000);
       })
     )
-    .map(count => console.log(count))
     .subscribe(() => winston.debug("startRandomSequence next"),
         err => winston.error("startRandomSequence err", err),
         () => winston.debug("startRandomSequence done"))
   },
 
   cancelRandomSequence: function() {
-    winston.debug("cancelRandomSequence");
+    winston.info("Canceling random sequence");
     this.randomSequenceCanceled = true;
     if (!!this.randomSequenceDisposable) {
       this.randomSequenceDisposable.dispose();
@@ -205,11 +215,9 @@ Controller.prototype = {
   },
 
   pickRandomMessage: function(messages) {
-    let randomIndex = Math.round(Math.random() * messages.length);
+    let randomIndex = Math.round(Math.random() * (messages.length - 1));
     return messages[randomIndex];
   }
 };
 
-module.exports = {
-  Controller
-};
+module.exports = Controller;

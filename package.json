@@ -2,7 +2,7 @@
   "name": "stranger-things-leds",
   "version": "1.0.0",
   "description": "",
-  "main": "src/index.js",
+  "main": "app.js",
   "scripts": {
     "start": "node .",
     "test": "mocha **/*.test.js"

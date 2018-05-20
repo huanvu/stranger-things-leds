@@ -5,56 +5,21 @@ const winston = require('winston');
 
 let DEFAULT_ON_MS = 2000;
 let DEFAULT_OFF_MS = 500;
-let RED = 0x00FF00;
-let GREEN = 0xFF0000;
-let BLUE = 0x0000FF;
-let YELLOW = 0xFFFF00;
-let ORANGE = 0x80FF00;
 let OFF = 0x000000;
 
 let MAX_BRIGHTNESS = 50;
-
-let DEFAULT_CHAR_MAP = {
-  a: {pos: 0, color: GREEN},
-  b: {pos: 1, color: ORANGE},
-  c: {pos: 2, color: RED},
-  d: {pos: 3, color: BLUE},
-  e: {pos: 4, color: YELLOW},
-  f: {pos: 5, color: GREEN},
-  g: {pos: 6, color: ORANGE},
-  h: {pos: 7, color: RED},
-  i: {pos: 8, color: BLUE},
-  j: {pos: 9, color: YELLOW},
-  k: {pos: 10, color: GREEN},
-  l: {pos: 11, color: ORANGE},
-  m: {pos: 12, color: RED},
-  n: {pos: 13, color: BLUE},
-  o: {pos: 14, color: YELLOW},
-  p: {pos: 15, color: GREEN},
-  q: {pos: 16, color: ORANGE},
-  r: {pos: 17, color: RED},
-  s: {pos: 18, color: BLUE},
-  t: {pos: 19, color: YELLOW},
-  u: {pos: 20, color: GREEN},
-  v: {pos: 21, color: ORANGE},
-  w: {pos: 22, color: RED},
-  x: {pos: 23, color: BLUE},
-  y: {pos: 24, color: YELLOW},
-  z: {pos: 25, color: GREEN},
-}
 
 function rgb2Int(r, g, b) {
   return ((r & 0xff) << 16) + ((g & 0xff) << 8) + (b & 0xff);
 }
 
-function Lights(ledCount = 26, charMap = DEFAULT_CHAR_MAP, maxBrightness = MAX_BRIGHTNESS) {
-  this.ledCount = ledCount;
+function Lights(charMap = DEFAULT_CHAR_MAP, maxBrightness = MAX_BRIGHTNESS) {
+  this.ledCount = Object.keys(charMap).length;
   this.pixelData = new Uint32Array(this.ledCount);
   this.charMap = charMap;
-  this.queue = [];
   this.maxBrightness = maxBrightness;
   ws281x.init(this.ledCount);
-  ws281x.setBrightness(50);
+  ws281x.setBrightness(maxBrightness);
 };
 
 Lights.prototype = {
@@ -199,7 +164,7 @@ Lights.prototype = {
   
     return this.animateOff()
       .flatMap(() => {
-        winston.debug('Blinking', string);
+        winston.info('Blinking: ', string);
         return Observable.from([...string])
           .concatMap(char => 
             Observable.just(char)
@@ -210,11 +175,4 @@ Lights.prototype = {
   }
 };
 
-module.exports = {
-  Lights,
-  RED,
-  GREEN,
-  BLUE,
-  YELLOW,
-  ORANGE 
-};
+module.exports = Lights;
