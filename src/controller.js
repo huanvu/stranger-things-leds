@@ -191,11 +191,10 @@ Controller.prototype = {
 
     if (!this.messages || !this.messages.length) return;
     
-    let i = 0;
     this.randomSequenceDisposable = Observable.while(
-      () => !this.randomSequenceCanceled && i < 100,
+      () => !this.randomSequenceCanceled,
+      // otherwise the same message will always play
       Observable.defer(() => {
-        i++;
         return this.lights.blinkMessage(this.pickRandomMessage(this.messages))
           .delay(5000);
       })
