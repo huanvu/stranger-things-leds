@@ -20,6 +20,7 @@ function Lights(charMap = DEFAULT_CHAR_MAP, maxBrightness = MAX_BRIGHTNESS) {
     if (!this.charMap.hasOwnProperty(key)) return;
     this.ledCount = this.charMap[key].pos > this.ledCount ? this.charMap[key].pos : this.ledCount;
   }
+  this.ledCount++;
   this.pixelData = new Uint32Array(this.ledCount);
   this.charMap = charMap;
   this.maxBrightness = maxBrightness;
