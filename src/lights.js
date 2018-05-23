@@ -14,7 +14,12 @@ function rgb2Int(r, g, b) {
 }
 
 function Lights(charMap = DEFAULT_CHAR_MAP, maxBrightness = MAX_BRIGHTNESS) {
-  this.ledCount = Object.keys(charMap).length;
+  this.charMap = charMap;
+  this.ledCount = 0;
+  for (var key in this.charMap) {
+    if (!this.charMap.hasOwnProperty(key)) return;
+    this.ledCount = this.charMap[key].pos > this.ledCount ? this.charMap[key].pos : this.ledCount;
+  }
   this.pixelData = new Uint32Array(this.ledCount);
   this.charMap = charMap;
   this.maxBrightness = maxBrightness;
