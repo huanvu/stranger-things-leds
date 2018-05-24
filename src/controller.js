@@ -191,6 +191,7 @@ Controller.prototype = {
 
     if (!this.messages || !this.messages.length) return;
     
+    this.randomSequenceCanceled = false;
     this.randomSequenceDisposable = Observable.while(
       () => !this.randomSequenceCanceled,
       // otherwise the same message will always play
